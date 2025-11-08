@@ -1,7 +1,7 @@
 # traffic_streamlit.py
 # ------------------------------------------------------------
-# Red Light Idle Emissions — Streamlit port of your Pygame app
-# Controls in the left sidebar. Click Run/Pause to animate.
+# Red Light Idle Emissions — Streamlit (no experimental APIs)
+# Works on older Streamlit versions. No st.experimental_rerun.
 # ------------------------------------------------------------
 
 import time
@@ -9,10 +9,9 @@ import math
 import pandas as pd
 import streamlit as st
 
-# ---------- Page setup ----------
 st.set_page_config(page_title="Red Light Idle Emissions", page_icon="🚦", layout="wide")
 
-# ---------- Constants (from your Pygame code) ----------
+# ---------- Constants ----------
 COLOR_CO2 = "#58C759"   # (88, 199, 89)
 COLOR_CO  = "#FF9178"   # (255, 145, 120)
 COLOR_O2  = "#78B4FF"   # (120, 180, 255)
@@ -43,8 +42,9 @@ def init_state():
     s.baseline_co  = 0.0
     s.baseline_o2  = 100.0
 
+    # timing
     s.prev_ts = time.time()
-    s.running = True  # auto-update on load
+
     s.initialized = True
 
 def update_state(dt):
@@ -55,7 +55,7 @@ def update_state(dt):
         s.level_o2  -= s.vehicles * O2_CONSUME_PER_VEH * dt
         s.level_o2 = clamp(s.level_o2, 0, 100)
 
-        # slow settle toward baseline even on red
+        # slow settle even on red
         s.level_co2 = max(s.baseline_co2, s.level_co2 - SLOW_DECAY * dt)
         s.level_co  = max(s.baseline_co,  s.level_co  - SLOW_DECAY * dt)
     else:
@@ -90,48 +90,73 @@ with st.sidebar:
     st.header("Controls")
     s.is_red = st.toggle("Red light (idle)", value=s.is_red, help="Toggle red/green.")
     s.vehicles = st.slider("Vehicles waiting", 0, 99, s.vehicles, help="Number of vehicles at the signal.")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        if st.button("Run" if not s.running else "Pause"):
-            s.running = not s.running
-    with c2:
+
+    st.markdown("**Update options**")
+    colA, colB = st.columns(2)
+    with colA:
         if st.button("Step 0.2s"):
             update_state(0.2)
-    with c3:
-        if st.button("Reset"):
-            s.level_co2 = 0.0
-            s.level_co  = 0.0
-            s.level_o2  = 100.0
-            s.baseline_co2 = 0.0
-            s.baseline_co  = 0.0
-            s.baseline_o2  = 100.0
+    with colB:
+        run_secs = st.number_input("Run seconds", min_value=1.0, max_value=60.0, value=5.0, step=0.5)
+        if st.button("Run N seconds"):
+            placeholder_chart = st.empty()
+            placeholder_table = st.empty()
+            start = time.time()
+            last = start
+            while time.time() - start < run_secs:
+                now = time.time()
+                dt = clamp(now - last, 0.0, 0.25)
+                last = now
+                update_state(dt)
+
+                # draw during the loop (no rerun needed)
+                df = pd.DataFrame([
+                    {"Gas": "CO2",      "Level": s.level_co2, "Scaled": scaled_bar(s.level_co2, "CO2")},
+                    {"Gas": "CO",       "Level": s.level_co,  "Scaled": scaled_bar(s.level_co,  "CO")},
+                    {"Gas": "Fresh O2", "Level": s.level_o2,  "Scaled": scaled_bar(s.level_o2, "Fresh O2")},
+                ]).set_index("Gas")
+                placeholder_chart.bar_chart(df["Scaled"], height=360, use_container_width=True)
+                placeholder_table.dataframe(
+                    df[["Level"]].rename(columns={"Level": "Current Value"}),
+                    use_container_width=True
+                )
+                time.sleep(0.1)
+
+    st.markdown("---")
+    auto = st.checkbox("Auto-refresh (every 0.5s)", help="Version-safe; reloads the page periodically.")
+    if auto:
+        # Compute dt since last run, update once, then instruct the browser to refresh after 0.5s.
+        now = time.time()
+        dt = clamp(now - s.prev_ts, 0.0, 0.25)
+        s.prev_ts = now
+        update_state(dt)
+        # Safe, no Streamlit experimental API:
+        st.markdown(
+            "<meta http-equiv='refresh' content='0.5'>",
+            unsafe_allow_html=True
+        )
+    else:
+        # If not auto-refreshing, still keep prev_ts fresh for accurate future dt
+        s.prev_ts = time.time()
 
 st.markdown("## 🚦 Red Light Idle Emissions (Streamlit)")
 st.markdown(badge(s.is_red), unsafe_allow_html=True)
 st.write(f"**Vehicles:** {s.vehicles}")
 
-# Advance simulation (compute dt)
-now = time.time()
-dt = clamp(now - s.prev_ts, 0.0, 0.25)  # avoid big jumps after tab sleep
-s.prev_ts = now
-if s.running:
-    update_state(dt)
-
-# Draw UI
-data = [
+# Draw current frame once (for Step mode, after Run N seconds ends, or each auto-refresh tick)
+df_view = pd.DataFrame([
     {"Gas": "CO2",      "Level": s.level_co2, "Scaled": scaled_bar(s.level_co2, "CO2"),      "Color": COLOR_CO2},
     {"Gas": "CO",       "Level": s.level_co,  "Scaled": scaled_bar(s.level_co,  "CO"),       "Color": COLOR_CO},
     {"Gas": "Fresh O2", "Level": s.level_o2,  "Scaled": scaled_bar(s.level_o2, "Fresh O2"),  "Color": COLOR_O2},
-]
-df = pd.DataFrame(data)
+])
 
-left, right = st.columns([1.2, 1])  # keep compatible with older Streamlit (no vertical_alignment)
+left, right = st.columns([1.2, 1])
 
 with left:
     st.subheader("Idle Emissions — Bar Graph")
-    st.bar_chart(df.set_index("Gas")["Scaled"], height=360, use_container_width=True)
+    st.bar_chart(df_view.set_index("Gas")["Scaled"], height=360, use_container_width=True)
     st.dataframe(
-        df[["Gas", "Level"]].rename(columns={"Level": "Current Value"}),
+        df_view[["Gas", "Level"]].rename(columns={"Level": "Current Value"}),
         use_container_width=True,
         hide_index=True
     )
@@ -146,10 +171,4 @@ with right:
     st.caption("Constants: CO₂/veh=2.5, CO/veh=1.6, O₂ use/veh=0.8; decay/recovery tuned for demo.")
 
 st.divider()
-st.caption("Tip: If the page seems stuck, click **Run** in the sidebar or hard-refresh (Cmd+Shift+R).")
-
-# Trigger another pass after rendering (continuous animation)
-if s.running:
-    time.sleep(0.1)
-    # Use experimental_rerun for broad compatibility (works on 1.37+)
-    st.experimental_rerun()
+st.caption("Tip: For continuous motion, enable **Auto-refresh** or use **Run N seconds**.")
