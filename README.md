@@ -82,8 +82,7 @@ just upload the files and click **Deploy**.
 ---
 
 ## 🧑‍💻 Author
-**Umesh Chandra Karthikeya**  
-Founder & CEO — Acintyo Group  
+**Umesh Chandra Karthikeya**    
 🌐 [karthikeya.koduru07@icloud.com]
 
 ---
