@@ -82,9 +82,9 @@ just upload the files and click **Deploy**.
 ---
 
 ## 🧑‍💻 Author
-**Viswanath Koduru**  
+**Umesh Chandra Karthikeya**  
 Founder & CEO — Acintyo Group  
-🌐 [www.acintyo.co.in](https://www.acintyo.co.in)
+🌐 [karthikeya.koduru07@icloud.com]
 
 ---
 
