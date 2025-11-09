@@ -45,3 +45,50 @@ This simulation highlights how idling vehicles contribute to air pollution and o
    ```bash
    git clone https://github.com/<your-username>/red-light-emissions.git
    cd red-light-emissions
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Run the Streamlit app:
+   ```bash
+   streamlit run traffic_streamlit.py
+   ```
+
+### Option 2 — Run Online (Streamlit Cloud)
+You can also deploy it directly to [Streamlit Cloud](https://streamlit.io/cloud) —  
+just upload the files and click **Deploy**.
+
+---
+
+## 📊 Simulation Parameters
+| Parameter | Description | Default |
+|------------|-------------|----------|
+| Vehicles | Number of idling vehicles | 12 |
+| CO₂ per vehicle | Rate of emission per second | 2.5 units |
+| CO per vehicle | Rate of emission per second | 1.6 units |
+| O₂ consumption | O₂ consumed per vehicle | 0.8 units |
+| Recovery rate | O₂ recovery during GREEN | 0.8 units |
+| Decay rate | Rate of CO/CO₂ dispersion | 0.9–1.1 units |
+
+---
+
+## 🌱 Future Enhancements
+- Integrate **real-time traffic or emission data**.
+- Display **historical pollution graphs**.
+- Add **CNG fleet simulation** toggle.
+- Export simulation data to CSV.
+
+---
+
+## 🧑‍💻 Author
+**Viswanath Koduru**  
+Founder & CEO — Acintyo Group  
+🌐 [www.acintyo.co.in](https://www.acintyo.co.in)
+
+---
+
+## 📜 License
+This project is licensed under the MIT License — feel free to use, modify, and share responsibly.
+
+---
